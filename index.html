@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<title>PDF Swipe Viewer (Select File)</title>
+		<style>
+			body {
+				font-family: sans-serif;
+				text-align: center;
+			}
+			canvas {
+				border: 1px solid #aaa;
+				margin-top: 20px;
+				cursor: grab;
+			}
+			#info {
+				margin-top: 10px;
+			}
+		</style>
+	</head>
+	<body>
+		<input
+			type="file"
+			id="pdf-input"
+			accept="application/pdf"
+			style="display: none"
+		/>
+
+		<canvas id="pdf-canvas"></canvas>
+		<div id="info">
+			Trang: <span id="page-num">--</span> / <span id="page-count">--</span>
+		</div>
+		<!-- PDF.js from CDN -->
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.10.111/pdf.min.js"></script>
+		<script>
+			const url = "demo.pdf";
+
+			pdfjsLib.getDocument(url).promise.then((pdf) => {
+				pdfDoc = pdf;
+				currentPage = 1;
+				pageCountEl.textContent = pdfDoc.numPages;
+				info.style.display = "block";
+				renderPage(currentPage);
+			});
+
+			const input = document.getElementById("pdf-input");
+			const canvas = document.getElementById("pdf-canvas");
+			const ctx = canvas.getContext("2d");
+			const pageNumEl = document.getElementById("page-num");
+			const pageCountEl = document.getElementById("page-count");
+			const info = document.getElementById("info");
+
+			let pdfDoc = null;
+			let currentPage = 1;
+			let startX = null;
+
+			function renderPage(num) {
+				pdfDoc.getPage(num).then((page) => {
+					const viewport = page.getViewport({ scale: 1.5 });
+					canvas.height = viewport.height;
+					canvas.width = viewport.width;
+
+					const renderContext = {
+						canvasContext: ctx,
+						viewport: viewport,
+					};
+					page.render(renderContext);
+					pageNumEl.textContent = num;
+				});
+			}
+
+			function nextPage() {
+				if (currentPage < pdfDoc.numPages) {
+					currentPage++;
+					renderPage(currentPage);
+				}
+			}
+
+			function prevPage() {
+				if (currentPage > 1) {
+					currentPage--;
+					renderPage(currentPage);
+				}
+			}
+
+			input.addEventListener("change", (e) => {
+				const file = e.target.files[0];
+
+				if (!file || file.type !== "application/pdf") return;
+
+				const reader = new FileReader();
+				reader.onload = function () {
+					const typedArray = new Uint8Array(this.result);
+					pdfjsLib.getDocument(typedArray).promise.then((pdf) => {
+						pdfDoc = pdf;
+						currentPage = 1;
+						pageCountEl.textContent = pdfDoc.numPages;
+						info.style.display = "block";
+						renderPage(currentPage);
+					});
+				};
+				reader.readAsArrayBuffer(file);
+			});
+
+			// Swipe detection (mouse drag)
+			canvas.addEventListener("mousedown", (e) => {
+				startX = e.clientX;
+			});
+
+			canvas.addEventListener("mouseup", (e) => {
+				if (startX === null) return;
+				const deltaX = e.clientX - startX;
+				if (Math.abs(deltaX) > 50) {
+					if (deltaX < 0) {
+						nextPage(); // swipe left
+					} else {
+						prevPage(); // swipe right
+					}
+				}
+				startX = null;
+			});
+		</script>
+	</body>
+</html>
