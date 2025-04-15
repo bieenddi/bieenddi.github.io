@@ -30,7 +30,6 @@
 				transform: translateX(-50%);
 				font-size: 18px;
 				color: #fff;
-				/* background-color: rgba(0, 0, 0, 0.6); */
 				padding: 5px 10px;
 				border-radius: 5px;
 				z-index: 10;
@@ -125,9 +124,15 @@
 			<span id="page-num" style="display: none"></span>
 			<span id="page-count" style="display: none"></span>
 		</div>
-		<div id="goto-container">
-			<input type="number" id="goto-input" min="1" placeholder="Trang #" />
-			<button id="goto-btn">Go</button>
+		<div id="goto-container" style="display: none">
+			<input
+				type="number"
+				id="goto-input"
+				min="1"
+				placeholder="Tới trang"
+				style="display: none"
+			/>
+			<button id="goto-btn" style="display: none">Go</button>
 		</div>
 		<div id="loading">Đang tải...</div>
 
@@ -178,13 +183,13 @@
 				});
 			}
 
-			function loadPdf(url) {
+			function loadPdf(url, goToLastPage = false) {
 				showLoading(true);
 				pdfjsLib
 					.getDocument(url)
 					.promise.then((pdf) => {
 						pdfDoc = pdf;
-						currentPage = 1;
+						currentPage = goToLastPage ? pdfDoc.numPages : 1;
 						pageCountEl.textContent = pdfDoc.numPages;
 						info.style.display = "block";
 						renderPage(currentPage);
@@ -206,6 +211,9 @@
 				if (currentPage > 1) {
 					currentPage--;
 					renderPage(currentPage);
+				} else if (currentPdfIndex > 0) {
+					currentPdfIndex--;
+					loadPdf(pdfs[currentPdfIndex], true); // load last page of previous PDF
 				}
 			}
 
@@ -220,19 +228,40 @@
 			}
 
 			function goToPage() {
-				const inputVal = parseInt(document.getElementById("goto-input").value);
-				if (
-					!isNaN(inputVal) &&
-					inputVal >= 1 &&
-					inputVal <= 35 &&
-					currentPdfIndex === 0
-				) {
-					currentPage = inputVal;
+				const inputEl = document.getElementById("goto-input");
+				const inputVal = parseInt(inputEl.value);
+				if (isNaN(inputVal) || inputVal < 1) {
+					alert("Please enter a valid page number.");
+					return;
+				}
+
+				// Assume first PDF has 35 pages
+				const pdf1Pages = 35;
+
+				const clearAndRender = (pageNumber) => {
+					currentPage = pageNumber;
 					renderPage(currentPage);
+					inputEl.value = ""; // Clear input after rendering starts
+				};
+
+				if (inputVal <= pdf1Pages) {
+					if (currentPdfIndex !== 0) {
+						currentPdfIndex = 0;
+						loadPdf(pdfs[0]);
+						setTimeout(() => clearAndRender(inputVal), 300);
+					} else {
+						clearAndRender(inputVal);
+					}
 				} else {
-					alert(
-						"Please enter a valid page number between 1 and 35 (first PDF only)."
-					);
+					// Page from second PDF
+					const pageInSecondPdf = inputVal - pdf1Pages;
+					if (currentPdfIndex !== 1) {
+						currentPdfIndex = 1;
+						loadPdf(pdfs[1]);
+						setTimeout(() => clearAndRender(pageInSecondPdf), 300);
+					} else {
+						clearAndRender(pageInSecondPdf);
+					}
 				}
 			}
 
