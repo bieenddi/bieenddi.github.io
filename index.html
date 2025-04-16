@@ -1,13 +1,156 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+		<title>Flip Book</title>
+
+		<!-- CSS -->
+		<link rel="stylesheet" href="./style.css" />
+
+		<!-- Remix Icon -->
+		<link
+			href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css"
+			rel="stylesheet"
+		/>
+
+		<!-- Script -->
+		<script src="./script.js" defer></script>
+	</head>
+
+	<body>
+		<main>
+			<!-- Inject checkboxes dynamically -->
+			<script>
+				document.write(`<input type="checkbox" id="cover_checkbox" />`);
+				for (let i = 1; i <= 37; i++) {
+					document.write(`<input type="checkbox" id="page${i}_checkbox" />`);
+				}
+			</script>
+
+			<!-- Flipbook container -->
+			<div id="flip_book">
+				<div class="front_cover">
+					<label for="cover_checkbox" id="cover"></label>
+				</div>
+
+				<!-- Inject pages dynamically -->
+				<script>
+					for (let i = 1; i <= 37; i++) {
+						const frontImg = `./assets/images/pages/page${
+							(i - 1) * 2 + 1
+						}.webp`;
+						const backImg = `./assets/images/pages/page${(i - 1) * 2 + 2}.webp`;
+
+						document.write(`
+					<div class="page" id="page${i}">
+						<div class="front_page">
+							<label for="page${i}_checkbox"></label>
+							<img class="edge_shading" src="./assets/images/front_page_edge_shading.webp" alt="Front page edge shading" />
+							<img class="front_content" src="${frontImg}" alt="Front content" />
+						</div>
+						<div class="back_page">
+							<label for="page${i}_checkbox"></label>
+							<img class="edge_shading" src="./assets/images/back_page_edge_shading.webp" alt="Back page edge shading" />
+							<img class="back_content" src="${backImg}" alt="Back content" />
+						</div>
+					</div>
+				`);
+					}
+				</script>
+
+				<div class="back_cover"></div>
+			</div>
+
+			<!-- Toggle mode button -->
+			<button id="toggle-mode-btn">
+				<i class="ri-moon-line"></i>
+			</button>
+		</main>
+	</body>
+	<script>
+		const styleSheet = document.createElement("style");
+		let css = "";
+
+		for (let i = 1; i <= 37; i++) {
+			css += `
+				#page${i}_checkbox:checked ~ #flip_book #page${i} {
+					transform: rotateY(-180deg);
+					z-index: ${i + 5};
+				}
+			`;
+		}
+
+		styleSheet.innerHTML = css;
+		document.head.appendChild(styleSheet);
+	</script>
+	<script>
+		let currentPage = 0;
+		const totalPages = 37;
+
+		const checkboxes = [];
+		for (let i = 1; i <= totalPages; i++) {
+			checkboxes[i] = document.getElementById(`page${i}_checkbox`);
+		}
+
+		const flipBook = document.getElementById("flip_book");
+
+		let touchStartX = 0;
+		let touchEndX = 0;
+		let debounceTimeout = null; // Variable to manage debounce
+
+		function goToPage(newPage) {
+			// Close cover
+			if (newPage === 0) {
+				coverCheckbox.checked = false;
+				for (let i = 1; i <= totalPages; i++) {
+					checkboxes[i].checked = false;
+				}
+			}
+			// Open cover
+			else if (currentPage === 0 && newPage === 1) {
+				coverCheckbox.checked = true;
+				checkboxes[1].checked = true;
+			}
+			// Navigate between inner pages
+			else {
+				if (newPage > currentPage) {
+					checkboxes[newPage].checked = true;
+				} else {
+					checkboxes[currentPage].checked = false;
+				}
+			}
+			currentPage = newPage;
+		}
+
+		function handleSwipe() {
+			// Prevent swiping on the cover page
+			if (currentPage === 0) return;
+
+			// Prevent multiple swipes in quick succession
+			if (debounceTimeout) {
+				clearTimeout(debounceTimeout); // Clear previous timeout
+			}
+
+			// Set debounce timeout
+			debounceTimeout = setTimeout(() => {
+				if (touchEndX < touchStartX - 50 && currentPage < totalPages) {
+					goToPage(currentPage + 1);
+				}
+				if (touchEndX > touchStartX + 50 && currentPage > 0) {
+					goToPage(currentPage - 1);
+				}
+			}, 200); // Set delay to 200ms to allow swipe recognition without overlap
+		}
+
+		flipBook.addEventListener("touchstart", (e) => {
+			touchStartX = e.changedTouches[0].screenX;
+		});
+
+		flipBook.addEventListener("touchend", (e) => {
+			touchEndX = e.changedTouches[0].screenX;
+			handleSwipe();
+		});
+	</script>
 </html>
