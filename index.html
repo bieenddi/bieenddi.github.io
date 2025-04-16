@@ -67,6 +67,15 @@
 			<button id="toggle-mode-btn">
 				<i class="ri-moon-line"></i>
 			</button>
+
+			<!-- Single Page Viewer (hidden by default) -->
+			<div id="single_page_viewer" style="display: none">
+				<div id="single_page_nav">
+					<div id="left_click_zone"></div>
+					<img id="single_page_img" src="" alt="Page" />
+					<div id="right_click_zone"></div>
+				</div>
+			</div>
 		</main>
 	</body>
 	<script>
@@ -152,5 +161,82 @@
 			touchEndX = e.changedTouches[0].screenX;
 			handleSwipe();
 		});
+	</script>
+
+	<script>
+		const singlePageViewer = document.getElementById("single_page_viewer");
+		const singlePageImg = document.getElementById("single_page_img");
+		const leftClick = document.getElementById("left_click_zone");
+		const rightClick = document.getElementById("right_click_zone");
+
+		let singlePageIndex = 0;
+		const totalSinglePages = 74; // 37 * 2 pages
+
+		function updateSinglePage() {
+			singlePageImg.src = `./assets/images/pages/page${
+				singlePageIndex + 1
+			}.webp`;
+		}
+
+		leftClick.addEventListener("click", () => {
+			if (singlePageIndex > 0) {
+				singlePageIndex--;
+				updateSinglePage();
+			}
+		});
+
+		rightClick.addEventListener("click", () => {
+			if (singlePageIndex < totalSinglePages - 1) {
+				singlePageIndex++;
+				updateSinglePage();
+			}
+		});
+
+		// Handle screen switch
+		function handleAspectRatioSwitch() {
+			const isPortrait = window.matchMedia("(max-aspect-ratio: 1/1)").matches;
+
+			if (isPortrait) {
+				document.getElementById("flip_book").style.display = "none";
+				singlePageViewer.style.display = "block";
+				updateSinglePage();
+			} else {
+				document.getElementById("flip_book").style.display = "block";
+				singlePageViewer.style.display = "none";
+			}
+		}
+
+		window.addEventListener("resize", handleAspectRatioSwitch);
+		window.addEventListener("load", handleAspectRatioSwitch);
+	</script>
+	<script>
+		let touchStartSingleX = 0;
+		let touchEndSingleX = 0;
+
+		const minSwipeDistance = 50; // Adjust as needed
+
+		singlePageViewer.addEventListener("touchstart", (e) => {
+			touchStartSingleX = e.changedTouches[0].screenX;
+		});
+
+		singlePageViewer.addEventListener("touchend", (e) => {
+			touchEndSingleX = e.changedTouches[0].screenX;
+			handleSwipe();
+		});
+
+		function handleSwipe() {
+			const distance = touchEndSingleX - touchStartSingleX; // Corrected variable names
+			if (Math.abs(distance) < minSwipeDistance) return;
+
+			if (distance > 0 && singlePageIndex > 0) {
+				// Swipe right → previous page
+				singlePageIndex--;
+				updateSinglePage();
+			} else if (distance < 0 && singlePageIndex < totalSinglePages - 1) {
+				// Swipe left → next page
+				singlePageIndex++;
+				updateSinglePage();
+			}
+		}
 	</script>
 </html>
